@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<head>
+<meta http-equiv="Content-type" content="text/html;charset=UTF-8">
+</head>
+<style>
+
+.axis .domain {
+  display: none;
+}
+
+#container{
+	margin-left: 15%;
+	width: 1000px;
+	padding: 10px;
+}
+
+</style>
+<div id = "container">
+	<svg width="1000" height="500" style = "padding: 30px;"></svg>
+	
+</div>
+<script src="https://d3js.org/d3.v4.min.js"></script>
+<script>
+
+var svg = d3.select("svg"),
+    margin = {top: 20, right: 20, bottom: 50, left: 70},
+    width = +svg.attr("width") - margin.left - margin.right,
+    height = +svg.attr("height") - margin.top - margin.bottom,
+    g = svg.append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+var x0 = d3.scaleBand()
+    .rangeRound([0, width])
+    .paddingInner(0.1);
+
+var x1 = d3.scaleBand()
+    .padding(0.05);
+
+var y = d3.scaleLinear()
+    .rangeRound([height, 0]);
+
+var z = d3.scaleOrdinal()
+    .range(["#1E90FF", "#FF0000"]);
+
+//Create Tooltip for displaying Data Value
+var tooltip = d3.select("body")
+    .append("div")
+    .style("position", "absolute")
+    .style("z-index", "10")
+    .style("visibility", "hidden")
+    .style("background", "white")
+	.style("border", "3px black solid")	
+	.style("width", "130px")
+	.style("height", "30px")
+	.style("text-align", "center");
+	
+d3.csv("dataTX.csv", function(d, i, columns) {
+  for (var i = 1, n = columns.length; i < n; ++i) d[columns[i]] = +d[columns[i]];
+  return d;
+}, function(error, data) {
+  if (error) throw error;
+
+  var keys = data.columns.slice(1);
+
+  x0.domain(data.map(function(d) { return d.date; }));
+  x1.domain(keys).rangeRound([0, x0.bandwidth()]);
+  y.domain([0, d3.max(data, function(d) { return d3.max(keys, function(key) { return d[key]; }); })]).nice();
+
+  g.append("g")
+    .selectAll("g")
+    .data(data)
+    .enter().append("g")
+      .attr("transform", function(d) { return "translate(" + x0(d.date) + ",0)"; })
+    .selectAll("rect")
+    .data(function(d) { return keys.map(function(key) { return {key: key, value: d[key]}; }); })
+    .enter().append("rect")
+      .attr("x", function(d) { return x1(d.key); })
+      .attr("y", function(d) { return y(d.value); })
+      .attr("width", x1.bandwidth())
+      .attr("height", function(d) { return height - y(d.value); })
+      .attr("fill", function(d) { return z(d.key); })
+	   //Display values on hover
+	  .on("mouseover", function(d){
+	  
+	  if (d.key == "Democrat"){
+		tooltip.style("background-color", "rgb(135,206,250)")
+		tooltip.text(d.value + " votes")
+	  }
+	  else if (d.key == "Republican"){
+		tooltip.style("background-color", "rgb(240,128,128)")
+		tooltip.text(d.value + " votes")	  
+	  }; return tooltip.style("visibility", "visible");})
+	  
+      .on("mousemove", function(){return tooltip.style("top", (d3.event.pageY-10)+"px").style("left",(d3.event.pageX+10)+"px");})
+      .on("mouseout", function(){return tooltip.style("visibility", "hidden");});
+
+  g.append("g")
+      .attr("class", "axis")
+      .attr("transform", "translate(0," + height + ")")
+      .call(d3.axisBottom(x0));
+
+  g.append("g")
+      .attr("class", "axis")
+      .call(d3.axisLeft(y).ticks(25, ".0f"))
+	      .attr('transform', 'translate(' + 10 + ', 0)')
+    .append("text")
+      .attr("x", 20)
+      .attr("y", y(y.ticks().pop()) - 0.5)
+	  .attr("font-size", 18)
+      .attr("dy", "0.32em")
+      .attr("fill", "#000")
+      .attr("font-weight", "bold")
+      .attr("transform", "rotate(-90)")
+	  .attr("width", "400px")
+      .attr("y", -15 - margin.left)
+      .attr("x", 0 - (height / 2))
+      .attr("dy", "1em")
+      .style("text-anchor", "middle")
+      .text("Number of Votes");
+
+  var legend = g.append("g")
+      .attr("font-family", "sans-serif")
+      .attr("font-size", 10)
+      .attr("text-anchor", "end")
+    .selectAll("g")
+    .data(keys.slice().reverse())
+    .enter().append("g")
+      .attr("transform", function(d, i) { return "translate(0," + i * -20 + ")"; })  
+
+  legend.append("rect")
+      .attr("x", width - 19)
+      .attr("width", 19)
+      .attr("height", 19)
+      .attr("fill", z);
+
+  legend.append("text")
+      .attr("x", width - 24)
+      .attr("y", 9.5)
+      .attr("dy", "0.32em")
+      .text(function(d) { return d; });
+	  
+	 //X axis Label 
+	svg.append("text")             
+      .attr("transform",
+            "translate(" + (width/2) + " ," + 
+                           (height + margin.top + 30) + ")")
+      .style("text-anchor", "middle")
+	  .attr("font-size", 18)
+	  .attr("font-weight", "bold")
+      .text("Date in Years");
+	  //Title
+	  svg.append("text")
+        .attr("x", (width / 2))             
+        .attr("y", 0 - (margin.top -35))
+		.attr("font-weight", "bold")
+        .attr("text-anchor", "middle") 
+		.attr("padding", "30") 
+        .style("font-size", "22px") 
+        .style("text-decoration", "underline")  
+        .text("Presidential Election Data in Texas");
+	  
+});
+
+</script>
